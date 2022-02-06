@@ -1,19 +1,45 @@
 mod base;
 
+use base::Line;
+
 fn main() {
 
-    let mut desc = base::Description::new();
-    desc.push((1,base::Block::COLOR(1)));
-    desc.push((2,base::Block::COLOR(1)));
+    let b = base::Block::COLOR(1);
 
-    let line = base::Line {
-        blocks: vec![base::Block::UNKNOWN, base::Block::UNKNOWN, base::Block::UNKNOWN, base::Block::UNKNOWN,base::Block::UNKNOWN,base::Block::UNKNOWN],
-        desc: desc
-    };
+    let mut rows = Vec::new();
+    rows.push(vec![(5, b)]);
+    rows.push(vec![(1, b),(1, b)]);
+    rows.push(vec![(1, b),(1, b)]);
+    rows.push(vec![(1, b),(1, b)]);
+    rows.push(vec![(1, b),(2, b)]);
+    
+    let mut cols = Vec::new();
+    cols.push(vec![(1, b)]);
+    cols.push(vec![(5, b)]);
+    cols.push(vec![(1, b)]);
+    cols.push(vec![(5, b)]);
+    cols.push(vec![(1, b),(1, b)]);
 
-    for x in base::LineIterator::from(line) {
+    let r = &rows;
+    let c = &cols;
+    
+    let mut grid = base::Grid::new(r, c);
+    
+    println!("L1:");
+
+    let l0 = grid.get_row(1);
+    for x in l0.iter() {
         println!("{:?}", x);
     }
 
-    println!("Hello, world!");
+    grid.set(1,0,base::Block::COLOR(1));
+
+    println!("L1:");
+    
+    let l1 = grid.get_row(1);
+    for x in l1.iter_candidates() {
+        println!("{:?}", x);
+    }
+
+    
 }
