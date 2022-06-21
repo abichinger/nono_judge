@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Block{
@@ -6,13 +7,13 @@ pub enum Block{
 }
 
 impl Block {
-    fn fix_to(&self, b:&Block) -> Self {
+    fn merge(&self, b:&Block) -> Self {
         match (self, b) {
             (Block::COLOR(c1), Block::COLOR(c2)) => {
                if c1 == c2 { self.clone() } else { Block::UNKNOWN }
             },
-            (Block::UNKNOWN, _) => b.clone(),
-            (_, Block::UNKNOWN) => self.clone(),
+            (Block::UNKNOWN, _) => Block::UNKNOWN,
+            (_, Block::UNKNOWN) => Block::UNKNOWN,
         }
     }
 }
@@ -22,6 +23,7 @@ type LineDescription = Vec<(Span, Block)>;
 pub type Description = Vec<(Span, Block)>;
 //type DescriptionSlice<'a> = &'a [(Span, Block)];
 
+#[derive(Debug)]
 pub struct Grid<'a> {
     row_desc: &'a[Description],
     col_desc: &'a[Description],
@@ -29,7 +31,7 @@ pub struct Grid<'a> {
 }
 
 impl<'a> Grid<'a> {
-    
+
     pub fn new(rows: &'a[Description], cols: &'a[Description]) -> Grid<'a> {
         let mut blocks = Vec::new();
 
@@ -75,17 +77,52 @@ impl<'a> Grid<'a> {
         }
     }
 
-    pub fn get_mut_row(&'a mut self, i: usize) -> MutRow {
-        MutRow {
-            grid: self,
-            i: i
-        }
-    }
+    pub fn solve(&mut self) {
 
-    pub fn get_mut_col(&'a mut self, i: usize) -> MutColumn {
-        MutColumn {
-            grid: self,
-            i: i
+        let mut solved_rows = HashSet::new();
+        let mut solved_cols = HashSet::new();
+        let mut progress;
+
+        while solved_rows.len() != self.rows() || solved_cols.len() != self.cols() {
+            progress = false;
+            
+            //solve rows
+            for i in 0..self.rows() {
+                if solved_rows.contains(&i) {
+                    continue
+                }
+                let new_blocks = self.get_row(i).solve();
+                if new_blocks.len() > 0 {
+                    progress = true;
+                }
+                for (col, b) in new_blocks {
+                    self.set(i, col, b);
+                }
+                if self.get_row(i).solved() {
+                    solved_rows.insert(i);
+                }
+            }
+
+            //solve columns
+            for i in 0..self.cols() {
+                if solved_cols.contains(&i) {
+                    continue
+                }
+                let new_blocks = self.get_col(i).solve();
+                if new_blocks.len() > 0 {
+                    progress = true;
+                }
+                for (row, b) in new_blocks {
+                    self.set(row, i, b);
+                }
+                if self.get_col(i).solved() {
+                    solved_cols.insert(i);
+                }
+            }
+
+            if progress == false {
+                panic!("unable to solve");
+            }
         }
     }
 }
@@ -100,20 +137,54 @@ pub struct Column<'a> {
     i: usize
 }
 
-pub struct MutRow<'a> {
-    grid: &'a mut Grid<'a>,
-    i: usize
-}
-
-pub struct MutColumn<'a> {
-    grid: &'a mut Grid<'a>,
-    i: usize
+fn merge(l1: &mut [Block], l2: &[Block]) {
+    for (i, b) in l2.iter().enumerate() {
+        l1[i] = l1[i].merge(b);
+    }
 }
 
 pub trait Line {
-    fn solve(&self) -> Vec<(usize, Block)>{
-        return Vec::new()
+    fn is_solved(&self, i: usize) -> bool {
+        self.get(i) != Block::UNKNOWN
     }
+
+    fn solved(&self) -> bool {
+        for i in 0..self.len() {
+            if !self.is_solved(i) {
+                return false
+            }
+        }
+        return true
+    }
+    
+    fn solve(&self) -> Vec<(usize, Block)>{
+        let mut vec = Vec::new();
+        
+        if self.solved() {
+            return vec
+        }
+
+        let mut iter = self.iter_candidates();
+        let first = iter.next();
+
+        if first == None {
+            return vec
+        }
+        let mut line = first.unwrap();
+
+        while let Some(l) = iter.next() {
+            merge(&mut line, &l)
+        }
+
+        for i in 0..self.len() {
+            if !self.is_solved(i) && line[i] != Block::UNKNOWN {
+                vec.push((i, line[i]))
+            }
+        }
+
+        return vec
+    }
+
     fn len(&self) -> usize;
     fn min_len(&self) -> usize;
     fn get(&self, i: usize) -> Block;
@@ -122,9 +193,8 @@ pub trait Line {
     fn known_blocks(&self) -> Vec<(usize, Block)> {
         let mut vec = Vec::new();
         for i in 0..self.len() {
-            let b = self.get(i);
-            if b != Block::UNKNOWN {
-                vec.push((i, b))
+            if self.is_solved(i) {
+                vec.push((i, self.get(i)))
             }
         }
         return vec
@@ -154,10 +224,6 @@ pub trait Line {
             known_blocks: self.known_blocks()
         }
     }
-}
-
-pub trait MutLine {
-    fn set(&mut self, i: usize, b: Block);
 }
 
 impl<'a> Line for Row<'a> {
@@ -195,18 +261,6 @@ impl<'a> Line for Column<'a> {
 
     fn get_desc(&self) -> &Description {
         &self.grid.col_desc[self.i]
-    }
-}
-
-impl<'a> MutLine for MutRow<'a> {
-    fn set(&mut self, i: usize, b: Block) {
-        self.grid.set(self.i, i, b)
-    }
-}
-
-impl<'a> MutLine for MutColumn<'a> {
-    fn set(&mut self, i: usize, b: Block) {
-        self.grid.set(i, self.i, b)
     }
 }
 
