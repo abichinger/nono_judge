@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Block{
     UNKNOWN,
@@ -7,7 +5,7 @@ pub enum Block{
 }
 
 impl Block {
-    fn merge(&self, b:&Block) -> Self {
+    pub fn merge(&self, b:&Block) -> Self {
         match (self, b) {
             (Block::COLOR(c1), Block::COLOR(c2)) => {
                if c1 == c2 { self.clone() } else { Block::UNKNOWN }
@@ -24,18 +22,18 @@ pub type Description = Vec<(Span, Block)>;
 //type DescriptionSlice<'a> = &'a [(Span, Block)];
 
 #[derive(Debug)]
-pub struct Grid<'a> {
-    row_desc: &'a[Description],
-    col_desc: &'a[Description],
+pub struct Grid {
+    row_desc: Vec<Description>,
+    col_desc: Vec<Description>,
     blocks: Vec<Vec<Block>>
 }
 
-impl<'a> Grid<'a> {
+impl Grid {
 
-    pub fn new(rows: &'a[Description], cols: &'a[Description]) -> Grid<'a> {
+    pub fn new(rows: Vec<Description>, cols: Vec<Description>) -> Grid {
         let mut blocks = Vec::new();
 
-        for _ in rows {
+        for _ in 0..rows.len() {
             let vec = vec![Block::UNKNOWN; cols.len()];
             blocks.push(vec)
         }
@@ -63,87 +61,71 @@ impl<'a> Grid<'a> {
         self.blocks[row][col] = b
     } 
 
-    pub fn get_row(&'a self, i: usize) -> Row {
+    pub fn get_row(&self, i: usize) -> Row {
         Row {
             grid: self,
             i: i
         }
     }
 
-    pub fn get_col(&'a self, i: usize) -> Column {
+    pub fn get_col(&self, i: usize) -> Column {
         Column {
             grid: self,
             i: i
         }
     }
 
-    pub fn solve(&mut self) {
+    fn parse_desc(&self, descriptions: &Vec<Description>) -> Vec<Vec<usize>> {
+        descriptions.iter().map(|desc| {
+            desc.iter().map(|(span, _)| *span).collect()
+        }).collect()
+    }
 
-        let mut solved_rows = HashSet::new();
-        let mut solved_cols = HashSet::new();
-        let mut progress;
+    pub fn row_descriptions(&self) -> Vec<Vec<usize>> {
+        return self.parse_desc(&self.row_desc)
+    }
 
-        while solved_rows.len() != self.rows() || solved_cols.len() != self.cols() {
-            progress = false;
-            
-            //solve rows
-            for i in 0..self.rows() {
-                if solved_rows.contains(&i) {
-                    continue
-                }
-                let new_blocks = self.get_row(i).solve();
-                if new_blocks.len() > 0 {
-                    progress = true;
-                }
-                for (col, b) in new_blocks {
-                    self.set(i, col, b);
-                }
-                if self.get_row(i).solved() {
-                    solved_rows.insert(i);
-                }
-            }
+    pub fn col_descriptions(&self) -> Vec<Vec<usize>> {
+        return self.parse_desc(&self.col_desc)
+    }
 
-            //solve columns
-            for i in 0..self.cols() {
-                if solved_cols.contains(&i) {
-                    continue
-                }
-                let new_blocks = self.get_col(i).solve();
-                if new_blocks.len() > 0 {
-                    progress = true;
-                }
-                for (row, b) in new_blocks {
-                    self.set(row, i, b);
-                }
-                if self.get_col(i).solved() {
-                    solved_cols.insert(i);
-                }
-            }
+    pub fn from_blocks(blocks: &Vec<Vec<Block>>) -> Grid {
+        let mut rows: Vec<Description> = Vec::new();
+        let mut cols: Vec<Description> = Vec::new();
 
-            if progress == false {
-                panic!("unable to solve");
-            }
+        let r_len = blocks.len();
+        let c_len = blocks[0].len();
+
+        for r in 0..r_len {
+            rows.push(Description::from_blocks(&blocks[r]))
         }
+
+        
+        for c in 0..c_len {
+            let mut col = Vec::new();
+
+            for r in 0..r_len {
+                col.push(blocks[r][c])
+            }
+            cols.push(Description::from_blocks(&col))
+        }
+
+        return Grid::new(rows, cols);
     }
 }
 
 pub struct Row<'a> {
-    grid: &'a Grid<'a>,
+    grid: &'a Grid,
     i: usize
 }
 
 pub struct Column<'a> {
-    grid: &'a Grid<'a>,
+    grid: &'a Grid,
     i: usize
 }
 
-fn merge(l1: &mut [Block], l2: &[Block]) {
-    for (i, b) in l2.iter().enumerate() {
-        l1[i] = l1[i].merge(b);
-    }
-}
-
 pub trait Line {
+    
     fn is_solved(&self, i: usize) -> bool {
         self.get(i) != Block::UNKNOWN
     }
@@ -155,34 +137,6 @@ pub trait Line {
             }
         }
         return true
-    }
-    
-    fn solve(&self) -> Vec<(usize, Block)>{
-        let mut vec = Vec::new();
-        
-        if self.solved() {
-            return vec
-        }
-
-        let mut iter = self.iter_candidates();
-        let first = iter.next();
-
-        if first == None {
-            return vec
-        }
-        let mut line = first.unwrap();
-
-        while let Some(l) = iter.next() {
-            merge(&mut line, &l)
-        }
-
-        for i in 0..self.len() {
-            if !self.is_solved(i) && line[i] != Block::UNKNOWN {
-                vec.push((i, line[i]))
-            }
-        }
-
-        return vec
     }
 
     fn len(&self) -> usize;
@@ -267,6 +221,7 @@ impl<'a> Line for Column<'a> {
 pub trait DescriptionTrait {
     fn length(&self) -> usize;
     fn to_line(&self, line_length: usize, fill: Block) -> Vec<Block>;
+    fn from_blocks(blocks: &Vec<Block>) -> Description;
 }
 
 impl DescriptionTrait for Description {
@@ -294,6 +249,32 @@ impl DescriptionTrait for Description {
         }
 
         return line
+    }
+
+    fn from_blocks(blocks: &Vec<Block>) -> Description {
+        let mut desc = Vec::new();
+        let mut span: Span = 0;
+        let mut cur_color = 0;
+        for b in blocks {
+            let c = match b {
+                Block::UNKNOWN => 0,
+                Block::COLOR(x) => *x
+            };
+
+            if c != cur_color {
+                if cur_color != 0 {
+                    desc.push((span, Block::COLOR(cur_color)))
+                }
+                cur_color = c;
+                span = 1;
+            } else {
+                span+=1;
+            }
+        }
+        if cur_color != 0 {
+            desc.push((span, Block::COLOR(cur_color)))
+        }
+        return desc;
     }
 }
 

@@ -1,6 +1,9 @@
 mod base;
+mod solver;
+mod formats;
 
-use base::Line;
+use solver::SimpleSolver;
+use solver::Solver;
 
 fn main() {
 
@@ -19,27 +22,10 @@ fn main() {
     cols.push(vec![(3, b)]);
     cols.push(vec![(1, b),(1, b)]);
     cols.push(vec![(2, b)]);
-
-    let r = &rows;
-    let c = &cols;
     
-    let mut grid = base::Grid::new(r, c);
+    let mut grid = base::Grid::new(rows, cols);
 
-    println!("L1:");
-    
-    let l1 = grid.get_row(1);
-    for x in l1.iter_candidates() {
-        println!("{:?}", x);
-    }
-
-    println!("sovle r0:");
-    let l0 = grid.get_row(0);
-    println!("{:?}", l0.solve());
-
-    println!("sovle r4:");
-    let l4 = grid.get_row(4);
-    println!("{:?}", l4.solve());
-
-    grid.solve();
+    let solver = SimpleSolver::new();
+    let _ = solver.solve(&mut grid);
     println!("{:?}", grid);
 }
