@@ -12,17 +12,17 @@ pub struct GridGenerator {
 
 impl GridGenerator {
 
-    pub fn new(width: u8, height: usize, step: Option<u64>, seed: Option<&str>) -> GridGenerator {
+    pub fn new(width: u8, height: u8, step: Option<u64>, seed: Option<&str>) -> GridGenerator {
         
         let mut blocks = Vec::new();
-        for i in 0..height {
+        for _ in 0..height {
             blocks.push(vec![Block::COLOR(0); width.into()])
         }
 
         let mut gen = GridGenerator {
             step: step.unwrap_or(1),
             max: (2 as u64).pow(width.into()),
-            rows: vec![0; height],
+            rows: vec![0; height.into()],
             columns: width,
             blocks: blocks,
             done: false

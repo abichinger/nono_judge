@@ -14,12 +14,10 @@ fn test_simple_solver() {
     };
 
     let solver = SimpleSolver::new();
-    let res = match solver.solve(&mut grid) {
-        Ok(res) => res,
-        Err(err) => panic!("{}", err)
+    match solver.solve(&mut grid) {
+        -1 => panic!("{}", "should be solvable"),
+        _ => {},
     };
-
-    assert_eq!(res, ());
 }
 
 #[test]

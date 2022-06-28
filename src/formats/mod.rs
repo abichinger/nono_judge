@@ -13,6 +13,10 @@ pub trait FormatHandler {
 }
 
 pub fn parse_desc(str_desc: &str) -> Result<Vec<(usize, Block)>> {
+    if str_desc == "0" {
+        return Ok(Vec::new())
+    }
+    
     let b = Block::COLOR(1);
     let mut desc = vec![];
     let str_nums = str_desc.split(" ");

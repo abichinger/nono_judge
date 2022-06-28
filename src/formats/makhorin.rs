@@ -15,6 +15,10 @@ impl FormatHandler for Makhorin {
         let lines = source.split("\n");
         for mut line in lines {
             line = line.trim();
+            if line == "" {
+                continue;
+            }
+
             match &line[..1] {
                 "#" => continue,
                 "*" => continue,
@@ -23,10 +27,6 @@ impl FormatHandler for Makhorin {
                     cols_active = true;
                     continue
                 },
-                "0" => {
-                    cols.push(Vec::new());
-                    continue
-                }
                 _ => {}
             };
 

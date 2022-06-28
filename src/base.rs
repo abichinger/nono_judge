@@ -112,6 +112,20 @@ impl Grid {
 
         return Grid::new(rows, cols);
     }
+
+    fn _has_empty_line(&self, descriptions: &Vec<Description>) -> bool {
+        for i in 0..descriptions.len() {
+            if descriptions[i].len() == 0 {
+                return true
+            }
+        }
+        return false
+    }
+
+    pub fn has_empty_line(&self) -> bool {
+        return self._has_empty_line(&self.row_desc) || self._has_empty_line(&self.col_desc)
+    }
+
 }
 
 pub struct Row<'a> {
@@ -238,8 +252,8 @@ impl DescriptionTrait for Description {
 
     fn to_line(&self, line_length: usize, fill: Block) -> Vec<Block> {
         let mut i = 0;
-        let mut line = Vec::with_capacity(line_length);
-        line.resize(5, fill);
+        let mut line = Vec::new();
+        line.resize(line_length, fill);
 
         for x in self.iter() {
             for _ in 0..x.0 {

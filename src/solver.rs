@@ -4,7 +4,7 @@ use super::base::Block;
 use std::collections::HashSet;
 
 pub trait Solver {
-    fn solve(&self, grid: &mut Grid) -> Result<(), &'static str>;
+    fn solve(&self, grid: &mut Grid) -> i32;
 } 
 
 pub struct SimpleSolver  {
@@ -17,10 +17,11 @@ impl SimpleSolver {
 }
 
 impl Solver for SimpleSolver {
-    fn solve(&self, grid: &mut Grid) -> Result<(), &'static str> {
+    fn solve(&self, grid: &mut Grid) -> i32 {
         let mut solved_rows = HashSet::new();
         let mut solved_cols = HashSet::new();
         let mut progress;
+        let mut sweeps: i32 = 0;
 
         while solved_rows.len() != grid.rows() || solved_cols.len() != grid.cols() {
             progress = false;
@@ -61,11 +62,13 @@ impl Solver for SimpleSolver {
                 }
             }
 
+            sweeps+=1;
+
             if progress == false {
-                return Err("unable to solve");
+                return -1;
             }
         }
-        return Ok(())
+        return sweeps
     }
 }
 
@@ -78,6 +81,13 @@ fn merge(l1: &mut [Block], l2: &[Block]) {
 fn resolveable(line: &dyn Line) -> Vec<(usize, Block)>{
     let mut vec = Vec::new();
     
+    if line.get_desc().len() == 0 {
+        for i in 0..line.len() {
+            vec.push((i, Block::COLOR(0)))
+        }
+        return vec
+    }
+
     if line.solved() {
         return vec
     }

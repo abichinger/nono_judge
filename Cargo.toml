@@ -2,8 +2,11 @@
 name = "nono_judge"
 version = "0.1.0"
 authors = ["Andreas Bichinger <andreas.bichinger@gmail.com>"]
-edition = "2018"
+description = "NonoJudge can generate and solve nonogram puzzles, which are solvable by logical reasoning"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clap = { version = "3.2.6", features = ["cargo"] }
+rustache = "^0.1"
